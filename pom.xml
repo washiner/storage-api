@@ -72,6 +72,13 @@
 			<artifactId>spring-boot-starter-test</artifactId>
 			<scope>test</scope>
 		</dependency>
+		<!-- SDK da AWS S3 — biblioteca que faz o Java falar com MinIO -->
+		<!-- MinIO é compatível com o protocolo S3 da Amazon -->
+		<dependency>
+			<groupId>software.amazon.awssdk</groupId>
+			<artifactId>s3</artifactId>
+			<version>2.25.60</version>
+		</dependency>
 	</dependencies>
 
 	<build>
