@@ -45,4 +45,9 @@ public class FileRecord {
     @Column(nullable = false)
     // momento exato do upload
     private LocalDateTime uploadedAt;
+
+    // URL do arquivo guardado no MinIO — gerada após o upload
+    // vazia por enquanto nos registros antigos — preenchida a partir de agora
+    @Column(nullable = false)
+    private String fileUrl;
 }
