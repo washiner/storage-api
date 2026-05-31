@@ -1,0 +1,2 @@
+ALTER TABLE files
+    ADD COLUMN file_url VARCHAR(500) NOT NULL DEFAULT '';
