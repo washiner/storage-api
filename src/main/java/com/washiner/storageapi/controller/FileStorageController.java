@@ -7,6 +7,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+
 @RestController
 // @RestController = @Controller + @ResponseBody
 // diz que essa classe é um controller REST — todas as respostas viram JSON
@@ -23,7 +25,7 @@ public class FileStorageController {
             @RequestParam("file") MultipartFile file
             // @RequestParam pega o campo "file" do form-data que vem do frontend
             // é diferente de @RequestBody — aqui não é JSON, é multipart
-    ) {
+    ) throws IOException {
         FileRecordResponse response = service.upload(file);
 
         // 201 Created — padrão REST quando um recurso é criado com sucesso

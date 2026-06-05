@@ -3,45 +3,60 @@ package com.washiner.storageapi.service;
 import com.washiner.storageapi.domain.entity.FileRecord;
 import com.washiner.storageapi.dto.response.FileRecordResponse;
 import com.washiner.storageapi.repository.FileRecordRepository;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Service
-// lombok gera construtor com todos os campos final — é a injeção de dependência
 @RequiredArgsConstructor
 public class FileStorageService {
 
     private final FileRecordRepository repository;
+    // injeta o MinioService — agora o arquivo vai para o MinIO de verdade
+    private final MinioService minioService;
 
-    public FileRecordResponse upload(MultipartFile file) {
+    @PostConstruct
+    // @PostConstruct é executado automaticamente depois que o Spring
+    // termina de criar e injetar todas as dependências dessa classe
+    // garante que o bucket existe antes do primeiro upload
+    public void init() {
+        minioService.createBucketIfNotExists();
+    }
 
-        // gera um nome único para o arquivo — evita conflito se dois usuários
-        // mandarem um arquivo com o mesmo nome, ex: "foto.png"
+    public FileRecordResponse upload(MultipartFile file) throws IOException {
+
+        // gera nome único para evitar conflito no MinIO
         String storedName = UUID.randomUUID() + "_" + file.getOriginalFilename();
 
-        // monta a entidade com os dados do arquivo recebido
+        // envia o arquivo para o MinIO e recebe a URL de volta
+        String fileUrl = minioService.uploadFile(storedName, file);
+
+        // monta a entidade com os metadados + URL do MinIO
         FileRecord record = FileRecord.builder()
                 .originalName(file.getOriginalFilename())
                 .storedName(storedName)
                 .contentType(file.getContentType())
                 .size(file.getSize())
                 .uploadedAt(LocalDateTime.now())
+                // agora salva a URL real do arquivo no MinIO
+                .fileUrl(fileUrl)
                 .build();
 
-        // salva no banco e guarda o resultado — o banco preenche o id
         FileRecord saved = repository.save(record);
 
-        // monta e retorna o response com os dados salvos
         return new FileRecordResponse(
                 saved.getId(),
                 saved.getOriginalName(),
                 saved.getContentType(),
                 saved.getSize(),
-                saved.getUploadedAt()
+                saved.getUploadedAt(),
+                // inclui a URL no response para o frontend saber onde está o arquivo
+                saved.getFileUrl()
         );
     }
 }
