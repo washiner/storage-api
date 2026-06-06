@@ -17,33 +17,24 @@ import java.util.UUID;
 public class FileStorageService {
 
     private final FileRecordRepository repository;
-    // injeta o MinioService — agora o arquivo vai para o MinIO de verdade
     private final MinioService minioService;
 
     @PostConstruct
-    // @PostConstruct é executado automaticamente depois que o Spring
-    // termina de criar e injetar todas as dependências dessa classe
-    // garante que o bucket existe antes do primeiro upload
     public void init() {
         minioService.createBucketIfNotExists();
     }
 
     public FileRecordResponse upload(MultipartFile file) throws IOException {
 
-        // gera nome único para evitar conflito no MinIO
         String storedName = UUID.randomUUID() + "_" + file.getOriginalFilename();
-
-        // envia o arquivo para o MinIO e recebe a URL de volta
         String fileUrl = minioService.uploadFile(storedName, file);
 
-        // monta a entidade com os metadados + URL do MinIO
         FileRecord record = FileRecord.builder()
                 .originalName(file.getOriginalFilename())
                 .storedName(storedName)
                 .contentType(file.getContentType())
                 .size(file.getSize())
                 .uploadedAt(LocalDateTime.now())
-                // agora salva a URL real do arquivo no MinIO
                 .fileUrl(fileUrl)
                 .build();
 
@@ -55,8 +46,18 @@ public class FileStorageService {
                 saved.getContentType(),
                 saved.getSize(),
                 saved.getUploadedAt(),
-                // inclui a URL no response para o frontend saber onde está o arquivo
                 saved.getFileUrl()
         );
+    }
+
+    // busca o arquivo no banco pelo id e gera um link temporário de 30 minutos
+    public String getFileLink(Long id) {
+        // busca o registro no banco — lança exceção se não encontrar
+        FileRecord record = repository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Arquivo não encontrado: " + id));
+
+        // pega o storedName — é o nome do arquivo dentro do MinIO
+        // e pede pro MinioService gerar a URL assinada
+        return minioService.generatePresignedUrl(record.getStoredName());
     }
 }
